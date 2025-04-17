@@ -1,0 +1,13 @@
+name: package-manager
+version: 0.1.0
+
+authors:
+  - Luciogi <84625092+Luciogi@users.noreply.github.com>
+
+targets:
+  package-manager:
+    main: src/package-manager.cr
+
+crystal: '>= 1.15.1'
+
+license: MIT
