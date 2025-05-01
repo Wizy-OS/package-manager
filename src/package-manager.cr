@@ -20,7 +20,7 @@ option_parser = OptionParser.parse do |parser|
   end
   parser.on "-i PKG", "Install package" do |pkg|
     puts "Installing #{pkg}"
-    raise "TODO: Implement"
+    install(pkg)
   end
   parser.on "-s PKG", "Search package" do |str|
     puts "Searching #{str}"
@@ -35,29 +35,35 @@ option_parser = OptionParser.parse do |parser|
     OPTIONS[:info] = pkg
   end
   parser.on "-R ROOT", "Specify Root directory for installation" do |path|
-    puts "Setting #{path}"
+    puts "Setting root #{path}"
     Globals.set_root_path(path)
   end
-  parser.on "-I <REPOPATH>", "Specify Repo path" do |path|
+  parser.on "-I <REPOPATH>", "Specify remote Repo path" do |path|
     puts "Setting repo #{path}"
-    Globals.set_db_path(path)
+    Globals.add_remote_db_path(path)
+  end
+  parser.on "-S", "Sync repositories" do
+    puts "Syncing repos"
+    fetch_db
   end
 end
 
 class Globals
-  @@db_path = "/var/cache/wpkg"
+  @@cache = "#{@@root}/var/cache/wpkg"
+  @@local_db_path = "#{@@root}/var/db/wpkg"
+  @@remote_db_path = ""
   @@root = "/"
 
-  def self.db_path
-    @@db_path
+  def self.local_db_path
+    @@local_db_path
   end
 
-  def self.set_db_path(path : String)
-    @@db_path = File.expand_path(path)
+  def self.add_remote_db_path(path : String)
+    @@remote_db_path = File.expand_path(path)
   end
 
-  def self.db
-    "#{@@db_path}/index.sqlite3"
+  def self.remote_db_path
+    "#{@@remote_db_path}"
   end
 
   def self.set_root_path(path : String)
@@ -67,10 +73,14 @@ class Globals
   def self.root
     @@root
   end
+
+  def self.cache
+    @@cache
+  end
 end
 
 def pkg_exist?(str : String)
-  db_file = "sqlite3://#{Globals.db}"
+  db_file = "sqlite3://#{Globals.local_db_path}/index.sqlite3"
   result = false
   DB.open db_file do |db|
     count = db.scalar "SELECT count(name) FROM packages WHERE name='#{str}'"
@@ -79,9 +89,18 @@ def pkg_exist?(str : String)
   result
 end
 
+def fetch_db
+  # fetch from Remote todo
+
+  # locally
+  remote_db = "#{Globals.remote_db_path}/index.sqlite3"
+  local_db = "#{Globals.local_db_path}/index.sqlite3"
+  File.copy(remote_db, local_db)
+end
+
 def search(str : String)
-  puts Globals.db
-  db_file = "sqlite3://#{Globals.db}"
+  puts Globals.local_db_path
+  db_file = "sqlite3://#{Globals.local_db_path}/index.sqlite3"
   DB.open db_file do |db|
     db.query "SELECT name,version,description FROM packages \
     WHERE name like '%#{str}%' ORDER BY name" do |result|
@@ -96,6 +115,37 @@ def search(str : String)
   end
 end
 
+def install(str : String)
+  fetch_db
+
+  unless pkg_exist?(str)
+    puts "Error: #{str} not found"
+    return
+  end
+
+  # construct filename from db
+  file_name = ""
+  db_file = "sqlite3://#{Globals.local_db_path}/index.sqlite3"
+  DB.open db_file do |db|
+    db.query "SELECT name,version FROM packages WHERE name='#{str}'" \
+      do |result|
+      result.each do
+        name = result.read(String)
+        ver = result.read(String).sub("-","_")
+
+        file_name = "#{name}-#{ver}.wpkg.tar.zstd"
+      end
+    end
+  end
+
+  # copy file to cache
+  remote_file = "#{Globals.remote_db_path}/#{file_name}"
+  cache_file = "#{Globals.cache}/#{file_name}"
+  File.copy(remote_file, cache_file)
+
+  # TODO handle dependecies
+  # TODO extract package to file system
+end
 
 unless OPTIONS[:search].empty?
   search(OPTIONS[:search])
