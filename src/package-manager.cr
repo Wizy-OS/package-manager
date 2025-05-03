@@ -80,7 +80,7 @@ class Globals
 end
 
 def pkg_exist?(str : String)
-  db_file = "sqlite3://#{Globals.local_db_path}/index.sqlite3"
+  db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
   result = false
   DB.open db_file do |db|
     count = db.scalar "SELECT count(name) FROM packages WHERE name='#{str}'"
@@ -96,6 +96,10 @@ def db_migration
 
   pkg_names = [] of String
 
+  unless File.exists?(local_index)
+    puts "No migrations to run"
+    return
+  end
   DB.open "sqlite3://#{local_index}" do |db|
     # 1 = True, 0 = False
     db.query "SELECT name FROM packages WHERE is_installed=1" do |res|
@@ -107,6 +111,7 @@ def db_migration
   end
 
   puts pkg_names
+  return if pkg_names.empty?
   File.copy(remote_index, local_index)
 
   DB.open "sqlite3://#{local_index}" do |db|
@@ -122,6 +127,9 @@ def fetch_db
   remote_db = "#{Globals.remote_db_path}/index.sqlite3"
   local_db = "#{Globals.local_db_path}/remote_index.sqlite3"
   File.copy(remote_db, local_db)
+  unless File.exists?("#{Globals.local_db_path}/local_index.sqlite3")
+    File.copy(local_db, "#{Globals.local_db_path}/local_index.sqlite3")
+  end
   db_migration
 end
 
@@ -173,8 +181,7 @@ def install(pkg_name : String)
   # mark as installed in DB
   db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
   DB.open db_file do |db|
-    db.exec "UPDATE packages SET is_installed=1 \
-      WHERE name="#{str}""
+    db.exec "UPDATE packages SET is_installed=1 WHERE name='#{pkg_name}'"
   end
 
   # TODO handle dependecies
