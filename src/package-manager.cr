@@ -89,18 +89,45 @@ def pkg_exist?(str : String)
   result
 end
 
+def db_migration
+  puts "Running DB migration"
+  remote_index = "#{Globals.local_db_path}/remote_index.sqlite3"
+  local_index = "#{Globals.local_db_path}/local_index.sqlite3"
+
+  pkg_names = [] of String
+
+  DB.open "sqlite3://#{local_index}" do |db|
+    # 1 = True, 0 = False
+    db.query "SELECT name FROM packages WHERE is_installed=1" do |res|
+      res.each do
+        name = res.read(String)
+        pkg_names.push(name)
+      end
+    end
+  end
+
+  puts pkg_names
+  File.copy(remote_index, local_index)
+
+  DB.open "sqlite3://#{local_index}" do |db|
+    pkg_names.each do |pkg_name|
+      db.exec "UPDATE packages SET is_installed=1 \
+        WHERE name="#{pkg_name}""
+    end
+  end
+end
+
 def fetch_db
   # fetch from Remote todo
-
-  # locally
   remote_db = "#{Globals.remote_db_path}/index.sqlite3"
-  local_db = "#{Globals.local_db_path}/index.sqlite3"
+  local_db = "#{Globals.local_db_path}/remote_index.sqlite3"
   File.copy(remote_db, local_db)
+  db_migration
 end
 
 def search(str : String)
   puts Globals.local_db_path
-  db_file = "sqlite3://#{Globals.local_db_path}/index.sqlite3"
+  db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
   DB.open db_file do |db|
     db.query "SELECT name,version,description FROM packages \
     WHERE name like '%#{str}%' ORDER BY name" do |result|
@@ -115,19 +142,19 @@ def search(str : String)
   end
 end
 
-def install(str : String)
+def install(pkg_name : String)
   fetch_db
 
-  unless pkg_exist?(str)
-    puts "Error: #{str} not found"
+  unless pkg_exist?(pkg_name)
+    puts "Error: #{pkg_name} not found"
     return
   end
 
   # construct filename from db
   file_name = ""
-  db_file = "sqlite3://#{Globals.local_db_path}/index.sqlite3"
+  db_file = "sqlite3://#{Globals.local_db_path}/remote_index.sqlite3"
   DB.open db_file do |db|
-    db.query "SELECT name,version FROM packages WHERE name='#{str}'" \
+    db.query "SELECT name,version FROM packages WHERE name='#{pkg_name}'" \
       do |result|
       result.each do
         name = result.read(String)
@@ -138,13 +165,21 @@ def install(str : String)
     end
   end
 
-  # copy file to cache
+  # copy file to cache to mark as installed
   remote_file = "#{Globals.remote_db_path}/#{file_name}"
   cache_file = "#{Globals.cache}/#{file_name}"
   File.copy(remote_file, cache_file)
 
+  # mark as installed in DB
+  db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
+  DB.open db_file do |db|
+    db.exec "UPDATE packages SET is_installed=1 \
+      WHERE name="#{str}""
+  end
+
   # TODO handle dependecies
   # TODO extract package to file system
+
 end
 
 unless OPTIONS[:search].empty?
