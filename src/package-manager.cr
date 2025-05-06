@@ -156,13 +156,15 @@ def repo_list
   puts Globals.local_db_path
   db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
   DB.open db_file do |db|
-    db.query "SELECT name,version,description FROM packages" do |result|
+    db.query "SELECT name,version,description,is_installed \
+    FROM packages" do |result|
       result.each do
         name = result.read(String)
         ver = result.read(String)
         desc = result.read(String)
+        is_installed = result.read(Int)
 
-        puts "#{name}[#{ver}] \t\t #{desc}"
+        puts "#{name}\t #{ver}\t #{"i" if is_installed == 1}\t #{desc}"
       end
     end
   end
