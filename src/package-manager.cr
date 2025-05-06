@@ -191,13 +191,8 @@ def install(pkg_name : String)
     return
   end
 
-  if p pkg_installed?(pkg_name)
+  if pkg_installed?(pkg_name)
     puts "#{pkg_name} is already installed."
-    return
-  end
-
-  unless pkg_exist?(pkg_name)
-    puts "Error: #{pkg_name} not found"
     return
   end
 
@@ -221,12 +216,6 @@ def install(pkg_name : String)
   cache_file = "#{Globals.cache}/#{file_name}"
   File.copy(remote_file, cache_file)
 
-  # mark as installed in DB
-  db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
-  DB.open db_file do |db|
-    db.exec "UPDATE packages SET is_installed=1 WHERE name='#{pkg_name}'"
-  end
-
   # TODO handle dependecies
   DB.open db_file do |db|
     id = db.scalar "SELECT pkgId FROM packages WHERE name='#{pkg_name}'"
@@ -238,8 +227,13 @@ def install(pkg_name : String)
     end
   end
 
-  # TODO extract package to file system
+  # mark as installed in DB
+  db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
+  DB.open db_file do |db|
+    db.exec "UPDATE packages SET is_installed=1 WHERE name='#{pkg_name}'"
+  end
 
+  # TODO extract package to file system
 end
 
 unless OPTIONS[:search].empty?
