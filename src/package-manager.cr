@@ -100,9 +100,11 @@ def db_migration
     puts "No migrations to run"
     return
   end
+
+  # Case: when some packages are installed
   DB.open "sqlite3://#{local_index}" do |db|
     # 1 = True, 0 = False
-    db.query "SELECT name FROM packages WHERE is_installed=1" do |res|
+    db.query "SELECT name FROM packages WHERE is_installed=TRUE" do |res|
       res.each do
         name = res.read(String)
         pkg_names.push(name)
