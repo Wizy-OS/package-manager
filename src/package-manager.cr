@@ -219,20 +219,26 @@ def install(pkg_name : String)
   File.copy(remote_file, cache_file)
 
   # TODO handle dependecies
+  dep_list = [] of String
   DB.open db_file do |db|
     id = db.scalar "SELECT pkgId FROM packages WHERE name='#{pkg_name}'"
     puts "id = #{id}"
     db.query "SELECT depName from dependencies WHERE pkgId=#{id}" do |res|
       res.each do
-        puts res.read(String)
+        dep_list.push(res.read(String))
       end
     end
+  end
+
+  puts dep_list
+  dep_list.each do |pkg|
+    install(pkg)
   end
 
   # mark as installed in DB
   db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
   DB.open db_file do |db|
-    db.exec "UPDATE packages SET is_installed=1 WHERE name='#{pkg_name}'"
+    db.exec "UPDATE packages SET is_installed=TRUE WHERE name='#{pkg_name}'"
   end
 
   # TODO extract package to file system
