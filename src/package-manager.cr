@@ -113,24 +113,27 @@ def db_migration
   end
 
   puts pkg_names
-  return if pkg_names.empty?
   File.copy(remote_index, local_index)
-
-  DB.open "sqlite3://#{local_index}" do |db|
-    pkg_names.each do |pkg_name|
-      db.exec "UPDATE packages SET is_installed=1 \
-        WHERE name="#{pkg_name}""
+  unless pkg_names.empty?
+    DB.open "sqlite3://#{local_index}" do |db|
+      pkg_names.each do |pkg_name|
+        db.exec "UPDATE packages SET is_installed=1 \
+          WHERE name="#{pkg_name}""
+      end
     end
   end
+
 end
 
 def fetch_db
   # fetch from Remote todo
-  remote_db = "#{Globals.remote_db_path}/index.sqlite3"
-  local_db = "#{Globals.local_db_path}/remote_index.sqlite3"
-  File.copy(remote_db, local_db)
-  unless File.exists?("#{Globals.local_db_path}/local_index.sqlite3")
-    File.copy(local_db, "#{Globals.local_db_path}/local_index.sqlite3")
+  index_db = "#{Globals.remote_db_path}/index.sqlite3"
+  our_remote_db = "#{Globals.local_db_path}/remote_index.sqlite3"
+  File.copy(index_db, our_remote_db)
+
+  our_local_db = "#{Globals.local_db_path}/local_index.sqlite3"
+  unless File.exists?(our_local_db)
+    File.copy(our_remote_db, our_local_db)
   end
   db_migration
 end
