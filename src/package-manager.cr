@@ -89,6 +89,16 @@ def pkg_exist?(str : String)
   result
 end
 
+def pkg_installed?(str : String)
+  db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
+  result = false
+  DB.open db_file do |db|
+    res = db.scalar "SELECT is_installed FROM packages WHERE name='#{str}'"
+    result = true if res == true
+  end
+  result
+end
+
 def db_migration
   puts "Running DB migration"
   remote_index = "#{Globals.local_db_path}/remote_index.sqlite3"
@@ -156,7 +166,15 @@ def search(str : String)
 end
 
 def install(pkg_name : String)
-  fetch_db
+  unless pkg_exist?(pkg_name)
+    puts "#{pkg_name} is not available in database"
+    return
+  end
+
+  if p pkg_installed?(pkg_name)
+    puts "#{pkg_name} is already installed."
+    return
+  end
 
   unless pkg_exist?(pkg_name)
     puts "Error: #{pkg_name} not found"
@@ -190,6 +208,16 @@ def install(pkg_name : String)
   end
 
   # TODO handle dependecies
+  DB.open db_file do |db|
+    id = db.scalar "SELECT pkgId FROM packages WHERE name='#{pkg_name}'"
+    puts "id = #{id}"
+    db.query "SELECT depName from dependencies WHERE pkgId=#{id}" do |res|
+      res.each do
+        puts res.read(String)
+      end
+    end
+  end
+
   # TODO extract package to file system
 
 end
