@@ -46,6 +46,10 @@ option_parser = OptionParser.parse do |parser|
     puts "Syncing repos"
     fetch_db
   end
+  parser.on "-L", "List all packages from repo" do
+    puts "Syncing repos"
+    repo_list
+  end
 end
 
 class Globals
@@ -146,6 +150,22 @@ def fetch_db
     File.copy(our_remote_db, our_local_db)
   end
   db_migration
+end
+
+def repo_list
+  puts Globals.local_db_path
+  db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
+  DB.open db_file do |db|
+    db.query "SELECT name,version,description FROM packages" do |result|
+      result.each do
+        name = result.read(String)
+        ver = result.read(String)
+        desc = result.read(String)
+
+        puts "#{name}[#{ver}] \t\t #{desc}"
+      end
+    end
+  end
 end
 
 def search(str : String)
