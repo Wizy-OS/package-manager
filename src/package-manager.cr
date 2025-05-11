@@ -241,7 +241,16 @@ def install(pkg_name : String)
     db.exec "UPDATE packages SET is_installed=TRUE WHERE name='#{pkg_name}'"
   end
 
-  # TODO extract package to file system
+  # extract package to file system
+  # process = Process.new("bsdtar -xvf #{cache_file} -C #{Globals.root}")
+  proc = Process.new("bsdtar", ["-xvf", cache_file, "-C", Globals.root,
+                                "--exclude", "props.yml",
+                                "--exclude", "files",
+                                "--exclude", "dirs",
+                                "--exclude", "install"],
+                                output: Process::Redirect::Pipe)
+  proc.wait
+
 end
 
 unless OPTIONS[:search].empty?
