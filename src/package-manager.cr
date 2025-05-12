@@ -218,7 +218,7 @@ def install(pkg_name : String)
   cache_file = "#{Globals.cache}/#{file_name}"
   File.copy(remote_file, cache_file)
 
-  # TODO handle dependecies
+  # handle dependecies
   dep_list = [] of String
   DB.open db_file do |db|
     id = db.scalar "SELECT pkgId FROM packages WHERE name='#{pkg_name}'"
@@ -250,7 +250,6 @@ def install(pkg_name : String)
                                 "--exclude", "install"],
                                 output: Process::Redirect::Pipe)
   proc.wait
-
 end
 
 unless OPTIONS[:search].empty?
