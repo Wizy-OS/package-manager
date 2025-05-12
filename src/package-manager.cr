@@ -97,8 +97,8 @@ def pkg_installed?(str : String)
   db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
   result = false
   DB.open db_file do |db|
-    res = db.scalar "SELECT is_installed FROM packages WHERE name='#{str}'"
-    result = true if res == true
+    output = p db.scalar "SELECT is_installed FROM packages WHERE name='#{str}'"
+    result = true if output == 1
   end
   result
 end
