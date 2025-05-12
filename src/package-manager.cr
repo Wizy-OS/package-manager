@@ -27,7 +27,7 @@ option_parser = OptionParser.parse do |parser|
     OPTIONS[:search] = str
   end
   parser.on "-r PKG", "Remove package" do |pkg|
-    puts "Installing #{pkg}"
+    puts "Removing #{pkg}"
     raise "TODO: Implement"
   end
   parser.on "-V PKG", "Display package details" do |pkg|
