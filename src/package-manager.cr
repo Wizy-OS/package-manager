@@ -97,7 +97,10 @@ def pkg_installed?(str : String)
   db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
   result = false
   DB.open db_file do |db|
-    output = p db.scalar "SELECT is_installed FROM packages WHERE name='#{str}'"
+    output = db.scalar "SELECT is_installed FROM packages WHERE name='#{str}'"
+  rescue
+    STDERR.puts "#{str} does not exist in local_index.sqlite3"
+  ensure
     result = true if output == 1
   end
   result
