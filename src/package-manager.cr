@@ -28,7 +28,7 @@ option_parser = OptionParser.parse do |parser|
   end
   parser.on "-r PKG", "Remove package" do |pkg|
     puts "Removing #{pkg}"
-    raise "TODO: Implement"
+    remove(pkg)
   end
   parser.on "-V PKG", "Display package details" do |pkg|
     puts "Info #{pkg}"
@@ -224,7 +224,7 @@ def install(pkg_name : String)
   # handle dependecies
   dep_list = [] of String
   DB.open db_file do |db|
-    id = db.scalar "SELECT pkgId FROM packages WHERE name='#{pkg_name}'"
+    id = get_pkg_id(pkg_name)
     puts "id = #{id}"
     db.query "SELECT depName from dependencies WHERE pkgId=#{id}" do |res|
       res.each do
@@ -253,6 +253,109 @@ def install(pkg_name : String)
                                 "--exclude", "install"],
                                 output: Process::Redirect::Pipe)
   proc.wait
+end
+
+def get_pkg_id(pkg_name : String)
+  db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
+  pkg_id = nil
+  DB.open db_file do |db|
+    pkg_id = db.scalar "SELECT pkgId FROM packages WHERE name='#{pkg_name}'"
+  end
+  pkg_id
+end
+
+def get_pkg_name(pkg_id : Int64)
+  db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
+  pkg_name = nil
+  DB.open db_file do |db|
+    pkg_name = db.scalar "SELECT name FROM packages WHERE pkgId='#{pkg_id}'"
+  end
+  pkg_name
+end
+
+def remove(pkg_name : String)
+  unless pkg_installed?(pkg_name)
+    puts "#{pkg_name} is not installed."
+    return
+  end
+
+  puts "#{pkg_name} found as installed"
+
+  # TODO check if some other package depend on this package
+  # 1. if this package don't exist in dependencies table,
+  #    then some other package do not depends on it
+  # 2. Print some other package(s)
+  # 3. exit
+  dependent_ids = [] of Int64
+  db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
+  DB.open db_file do |db|
+    db.query "SELECT pkgId FROM dependencies WHERE depName='#{pkg_name}'" \
+      do |result|
+      result.each do
+        dep_id = result.read(Int64)
+        dependent_ids.push(dep_id)
+      end
+    end
+  end
+
+  puts dependent_ids
+  dependants_names = dependent_ids.map do |i|
+    get_pkg_name(i)
+  end
+
+  installed_pkgs = [] of String
+  dependants_names.each do |x|
+    if pkg_installed?(x.as(String))
+      installed_pkgs.push(x.as(String))
+    end
+  end
+
+  unless installed_pkgs.empty?
+    puts "reverse dependencies found for #{pkg_name}:" unless dependent_ids.empty?
+    dependent_ids.each do |dep_id|
+      dep_name = get_pkg_name(dep_id)
+      puts "\t#{dep_name}"
+    end
+
+    unless dependent_ids.empty?
+      STDERR.puts "First remove dependent packages for #{pkg_name}"
+      STDERR.puts "Aborting process."
+      return
+    end
+  end
+
+  # Mark package as not installed
+  DB.open db_file do |db|
+    db.exec "UPDATE packages SET is_installed=FALSE WHERE name='#{pkg_name}'"
+    # db.exec "UPDATE packages SET is_installed=0 WHERE name='#{pkg_name}'"
+  end
+
+  # Delete files from file system carefully
+  id = get_pkg_id(pkg_name)
+  pkg_files = [] of String
+  DB.open db_file do |db|
+    db.query "SELECT path FROM files WHERE pkgId=#{id}" \
+      do |result|
+      result.each do
+        file = result.read(String)
+        pkg_files.push(file)
+      end
+    end
+  end
+
+  pkg_files = pkg_files.map { |f| "#{Globals.root}/#{f}"}
+  pkg_files.each do |path|
+    puts "removing #{path}"
+    dir = File.directory?(path)
+    if dir
+      if path.empty?
+        Dir.delete(path)
+      end
+    else
+      File.delete(path)
+    end
+  end
+
 end
 
 unless OPTIONS[:search].empty?
