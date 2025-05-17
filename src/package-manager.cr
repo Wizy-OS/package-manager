@@ -134,7 +134,7 @@ def db_migration
   unless pkg_names.empty?
     DB.open "sqlite3://#{local_index}" do |db|
       pkg_names.each do |pkg_name|
-        db.exec "UPDATE packages SET is_installed=1 \
+        db.exec "UPDATE packages SET is_installed=TRUE \
           WHERE name="#{pkg_name}""
       end
     end
