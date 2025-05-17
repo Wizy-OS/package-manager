@@ -47,7 +47,6 @@ option_parser = OptionParser.parse do |parser|
     fetch_db
   end
   parser.on "-L", "List all packages from repo" do
-    puts "Syncing repos"
     repo_list
   end
 end
