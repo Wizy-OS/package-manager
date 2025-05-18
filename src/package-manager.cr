@@ -120,7 +120,7 @@ def db_migration
   # Case: when some packages are installed
   DB.open "sqlite3://#{local_index}" do |db|
     # 1 = True, 0 = False
-    db.query "SELECT name FROM packages WHERE is_installed=TRUE" do |res|
+    db.query "SELECT name FROM packages WHERE is_installed=1" do |res|
       res.each do
         name = res.read(String)
         pkg_names.push(name)
@@ -133,8 +133,8 @@ def db_migration
   unless pkg_names.empty?
     DB.open "sqlite3://#{local_index}" do |db|
       pkg_names.each do |pkg_name|
-        db.exec "UPDATE packages SET is_installed=TRUE \
-          WHERE name="#{pkg_name}""
+        puts "UPDATE packages SET is_installed=1 WHERE name='#{pkg_name}'"
+        db.exec "UPDATE packages SET is_installed=1 WHERE name='#{pkg_name}'"
       end
     end
   end
@@ -240,7 +240,7 @@ def install(pkg_name : String)
   # mark as installed in DB
   db_file = "sqlite3://#{Globals.local_db_path}/local_index.sqlite3"
   DB.open db_file do |db|
-    db.exec "UPDATE packages SET is_installed=TRUE WHERE name='#{pkg_name}'"
+    db.exec "UPDATE packages SET is_installed=1 WHERE name='#{pkg_name}'"
   end
 
   # extract package to file system
@@ -325,8 +325,7 @@ def remove(pkg_name : String)
 
   # Mark package as not installed
   DB.open db_file do |db|
-    db.exec "UPDATE packages SET is_installed=FALSE WHERE name='#{pkg_name}'"
-    # db.exec "UPDATE packages SET is_installed=0 WHERE name='#{pkg_name}'"
+    db.exec "UPDATE packages SET is_installed=0 WHERE name='#{pkg_name}'"
   end
 
   # Delete files from file system carefully
