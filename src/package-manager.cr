@@ -246,10 +246,10 @@ def install(pkg_name : String)
   # extract package to file system
   # process = Process.new("bsdtar -xvf #{cache_file} -C #{Globals.root}")
   proc = Process.new("bsdtar", ["-xvf", cache_file, "-C", Globals.root,
-                                "--exclude", "props.yml",
-                                "--exclude", "files",
-                                "--exclude", "dirs",
-                                "--exclude", "install"],
+                                "--exclude", "^props.yml",
+                                "--exclude", "^files",
+                                "--exclude", "^dirs",
+                                "--exclude", "^install"],
                                 output: Process::Redirect::Pipe)
   proc.wait
 end
