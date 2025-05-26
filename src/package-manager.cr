@@ -191,13 +191,13 @@ end
 
 def install(pkg_name : String)
   unless pkg_exist?(pkg_name)
-    puts "#{pkg_name} is not available in database"
-    return
+    STDERR.puts "Error: #{pkg_name} is not available in database"
+    exit -1
   end
 
   if pkg_installed?(pkg_name)
     puts "#{pkg_name} is already installed."
-    return
+    return 0
   end
 
   # construct filename from db
