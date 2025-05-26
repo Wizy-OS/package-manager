@@ -319,7 +319,7 @@ def remove(pkg_name : String)
     unless dependent_ids.empty?
       STDERR.puts "First remove dependent packages for #{pkg_name}"
       STDERR.puts "Aborting process."
-      return
+      exit -1
     end
   end
 
@@ -350,7 +350,11 @@ def remove(pkg_name : String)
         Dir.delete(path)
       end
     else
-      File.delete(path)
+      begin
+        File.delete(path)
+      rescue ex
+        puts "WARNING: #{path}, does not exist, owned by #{pkg_name}"
+      end
     end
   end
 
